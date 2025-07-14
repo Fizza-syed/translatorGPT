@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TranslatorAI - Tourist Language Helper</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #e0eafc, #cfdef3);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 32px 28px 24px 28px;
+      max-width: 420px;
+      width: 100%;
+      margin: 32px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    h1 {
+      text-align: center;
+      color: #2d3a4b;
+      margin-bottom: 8px;
+      font-size: 2rem;
+    }
+    label {
+      font-weight: 500;
+      color: #3a4a5d;
+      margin-bottom: 4px;
+    }
+    select, textarea, input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #bfc9d1;
+      font-size: 1rem;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+      resize: none;
+    }
+    textarea {
+      min-height: 70px;
+      max-height: 120px;
+    }
+    button {
+      background: #4f8cff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 4px;
+    }
+    button:active, button:hover {
+      background: #2563eb;
+    }
+    .output {
+      background: #f4f8fb;
+      border-radius: 8px;
+      padding: 14px;
+      min-height: 48px;
+      font-size: 1.1rem;
+      color: #2d3a4b;
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+    .audio-btn {
+      background: #fff;
+      color: #4f8cff;
+      border: 1px solid #4f8cff;
+      margin-left: 8px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .audio-btn:hover {
+      background: #4f8cff;
+      color: #fff;
+    }
+    .record-btn {
+      background: #fff;
+      color: #e74c3c;
+      border: 1px solid #e74c3c;
+      margin-left: 8px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .record-btn:hover {
+      background: #e74c3c;
+      color: #fff;
+    }
+    .record-btn.recording {
+      background: #e74c3c;
+      color: #fff;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    .reply-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e1e8ed;
+    }
+    .reply-output {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 14px;
+      min-height: 48px;
+      font-size: 1.1rem;
+      color: #856404;
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+    .footer {
+      text-align: center;
+      color: #7a8ca3;
+      font-size: 0.95rem;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌍 TranslatorAI</h1>
+    <form id="translateForm" autocomplete="off">
+      <label for="sourceLang">From:</label>
+      <select id="sourceLang"></select>
+      <label for="targetLang">To:</label>
+      <select id="targetLang"></select>
+      <label for="inputText">Your text:</label>
+      <textarea id="inputText" placeholder="Type in your language..."></textarea>
+      <button type="submit">Translate</button>
+    </form>
+    <div class="output" id="outputText">Translation will appear here.</div>
+    <button class="audio-btn" id="playAudio" disabled>🔊 Listen</button>
+    <button class="record-btn" id="recordAudio">🎤 Record</button>
+  </div>
+      <div class="reply-section">
+      <div class="reply-output" id="replyOutput">Reply will appear here.</div>
+      <div style="margin-top: 12px;">
+        <label for="manualReply">Or type the reply manually:</label>
+        <textarea id="manualReply" placeholder="Type the reply in the target language..." style="margin-bottom: 8px;"></textarea>
+        <button type="button" id="translateReply" style="background: #28a745; margin-left: 0;">🔄 Translate Reply</button>
+      </div>
+    </div>
+  <div class="footer">Powered by Gemini 2.0 Flash | For tourists & travelers ✈️</div>
+  <script>
+    // Language list (ISO 639-1 codes and names)
+    const languages = [
+      { code: 'en', name: 'English' },
+      { code: 'es', name: 'Spanish' },
+      { code: 'fr', name: 'French' },
+      { code: 'de', name: 'German' },
+      { code: 'it', name: 'Italian' },
+      { code: 'pt', name: 'Portuguese' },
+      { code: 'ru', name: 'Russian' },
+      { code: 'zh', name: 'Chinese (Simplified)' },
+      { code: 'ja', name: 'Japanese' },
+      { code: 'ko', name: 'Korean' },
+      { code: 'ar', name: 'Arabic' },
+      { code: 'hi', name: 'Hindi' },
+      { code: 'tr', name: 'Turkish' },
+      { code: 'th', name: 'Thai' },
+      { code: 'pl', name: 'Polish' },
+      { code: 'nl', name: 'Dutch' },
+      { code: 'sv', name: 'Swedish' },
+      { code: 'el', name: 'Greek' },
+      { code: 'he', name: 'Hebrew' },
+      { code: 'id', name: 'Indonesian' },
+      { code: 'vi', name: 'Vietnamese' },
+      { code: 'fa', name: 'Persian' },
+      { code: 'ur', name: 'Urdu' },
+      { code: 'bn', name: 'Bengali' },
+      { code: 'uk', name: 'Ukrainian' },
+      { code: 'ro', name: 'Romanian' },
+      { code: 'hu', name: 'Hungarian' },
+      { code: 'cs', name: 'Czech' },
+      { code: 'fi', name: 'Finnish' },
+      { code: 'no', name: 'Norwegian' },
+      { code: 'da', name: 'Danish' },
+      { code: 'ms', name: 'Malay' },
+      { code: 'tl', name: 'Tagalog' },
+      { code: 'sw', name: 'Swahili' },
+      { code: 'ta', name: 'Tamil' },
+      { code: 'te', name: 'Telugu' },
+      { code: 'mr', name: 'Marathi' },
+      { code: 'gu', name: 'Gujarati' },
+      { code: 'pa', name: 'Punjabi' },
+      { code: 'jv', name: 'Javanese' },
+      { code: 'ml', name: 'Malayalam' },
+      { code: 'kn', name: 'Kannada' },
+      { code: 'si', name: 'Sinhala' },
+      { code: 'my', name: 'Burmese' },
+      { code: 'km', name: 'Khmer' },
+      { code: 'lo', name: 'Lao' },
+      { code: 'am', name: 'Amharic' },
+      { code: 'zu', name: 'Zulu' },
+      { code: 'af', name: 'Afrikaans' },
+      { code: 'fil', name: 'Filipino' },
+      { code: 'bg', name: 'Bulgarian' },
+      { code: 'hr', name: 'Croatian' },
+      { code: 'sk', name: 'Slovak' },
+      { code: 'sl', name: 'Slovenian' },
+      { code: 'et', name: 'Estonian' },
+      { code: 'lv', name: 'Latvian' },
+      { code: 'lt', name: 'Lithuanian' },
+      { code: 'sr', name: 'Serbian' },
+      { code: 'sq', name: 'Albanian' },
+      { code: 'ca', name: 'Catalan' },
+      { code: 'eu', name: 'Basque' },
+      { code: 'gl', name: 'Galician' },
+      { code: 'is', name: 'Icelandic' },
+      { code: 'mt', name: 'Maltese' },
+      { code: 'ga', name: 'Irish' },
+      { code: 'cy', name: 'Welsh' },
+      { code: 'lb', name: 'Luxembourgish' },
+      { code: 'mk', name: 'Macedonian' },
+      { code: 'bs', name: 'Bosnian' },
+      { code: 'mn', name: 'Mongolian' },
+      { code: 'ne', name: 'Nepali' },
+      { code: 'si', name: 'Sinhala' },
+      { code: 'hy', name: 'Armenian' },
+      { code: 'ka', name: 'Georgian' },
+      { code: 'az', name: 'Azerbaijani' },
+      { code: 'uz', name: 'Uzbek' },
+      { code: 'kk', name: 'Kazakh' },
+      { code: 'ky', name: 'Kyrgyz' },
+      { code: 'tg', name: 'Tajik' },
+      { code: 'tk', name: 'Turkmen' },
+      { code: 'ps', name: 'Pashto' },
+      { code: 'sd', name: 'Sindhi' },
+      { code: 'ku', name: 'Kurdish' },
+      { code: 'so', name: 'Somali' },
+      { code: 'yo', name: 'Yoruba' },
+      { code: 'ig', name: 'Igbo' },
+      { code: 'ha', name: 'Hausa' },
+      { code: 'rw', name: 'Kinyarwanda' },
+      { code: 'mg', name: 'Malagasy' },
+      { code: 'st', name: 'Sesotho' },
+      { code: 'tn', name: 'Tswana' },
+      { code: 'xh', name: 'Xhosa' },
+      { code: 'ss', name: 'Swati' },
+      { code: 've', name: 'Venda' },
+      { code: 'ts', name: 'Tsonga' },
+      { code: 'nr', name: 'Ndebele' },
+      { code: 'ny', name: 'Chichewa' },
+      { code: 'sn', name: 'Shona' },
+      { code: 'to', name: 'Tongan' },
+      { code: 'sm', name: 'Samoan' },
+      { code: 'fj', name: 'Fijian' },
+      { code: 'ty', name: 'Tahitian' },
+      { code: 'mi', name: 'Maori' },
+      { code: 'qu', name: 'Quechua' },
+      { code: 'ay', name: 'Aymara' },
+      { code: 'gn', name: 'Guarani' },
+      { code: 'gu', name: 'Gujarati' },
+      { code: 'or', name: 'Odia' },
+      { code: 'as', name: 'Assamese' },
+      { code: 'ml', name: 'Malayalam' },
+      { code: 'kn', name: 'Kannada' },
+      { code: 'sa', name: 'Sanskrit' },
+      { code: 'mr', name: 'Marathi' },
+      { code: 'ta', name: 'Tamil' },
+      { code: 'te', name: 'Telugu' },
+      { code: 'pa', name: 'Punjabi' },
+      { code: 'bn', name: 'Bengali' },
+      { code: 'ur', name: 'Urdu' },
+      { code: 'ne', name: 'Nepali' },
+      { code: 'si', name: 'Sinhala' },
+      { code: 'my', name: 'Burmese' },
+      { code: 'km', name: 'Khmer' },
+      { code: 'lo', name: 'Lao' },
+      { code: 'am', name: 'Amharic' },
+      { code: 'zu', name: 'Zulu' },
+      { code: 'af', name: 'Afrikaans' },
+      { code: 'fil', name: 'Filipino' },
+      { code: 'bg', name: 'Bulgarian' },
+      { code: 'hr', name: 'Croatian' },
+      { code: 'sk', name: 'Slovak' },
+      { code: 'sl', name: 'Slovenian' },
+      { code: 'et', name: 'Estonian' },
+      { code: 'lv', name: 'Latvian' },
+      { code: 'lt', name: 'Lithuanian' },
+      { code: 'sr', name: 'Serbian' },
+      { code: 'sq', name: 'Albanian' },
+      { code: 'ca', name: 'Catalan' },
+      { code: 'eu', name: 'Basque' },
+      { code: 'gl', name: 'Galician' },
+      { code: 'is', name: 'Icelandic' },
+      { code: 'mt', name: 'Maltese' },
+      { code: 'ga', name: 'Irish' },
+      { code: 'cy', name: 'Welsh' },
+      { code: 'lb', name: 'Luxembourgish' },
+      { code: 'mk', name: 'Macedonian' },
+      { code: 'bs', name: 'Bosnian' },
+      { code: 'mn', name: 'Mongolian' },
+      { code: 'hy', name: 'Armenian' },
+      { code: 'ka', name: 'Georgian' },
+      { code: 'az', name: 'Azerbaijani' },
+      { code: 'uz', name: 'Uzbek' },
+      { code: 'kk', name: 'Kazakh' },
+      { code: 'ky', name: 'Kyrgyz' },
+      { code: 'tg', name: 'Tajik' },
+      { code: 'tk', name: 'Turkmen' },
+      { code: 'ps', name: 'Pashto' },
+      { code: 'sd', name: 'Sindhi' },
+      { code: 'ku', name: 'Kurdish' },
+      { code: 'so', name: 'Somali' },
+      { code: 'yo', name: 'Yoruba' },
+      { code: 'ig', name: 'Igbo' },
+      { code: 'ha', name: 'Hausa' },
+      { code: 'rw', name: 'Kinyarwanda' },
+      { code: 'mg', name: 'Malagasy' },
+      { code: 'st', name: 'Sesotho' },
+      { code: 'tn', name: 'Tswana' },
+      { code: 'xh', name: 'Xhosa' },
+      { code: 'ss', name: 'Swati' },
+      { code: 've', name: 'Venda' },
+      { code: 'ts', name: 'Tsonga' },
+      { code: 'nr', name: 'Ndebele' },
+      { code: 'ny', name: 'Chichewa' },
+      { code: 'sn', name: 'Shona' },
+      { code: 'to', name: 'Tongan' },
+      { code: 'sm', name: 'Samoan' },
+      { code: 'fj', name: 'Fijian' },
+      { code: 'ty', name: 'Tahitian' },
+      { code: 'mi', name: 'Maori' },
+      { code: 'qu', name: 'Quechua' },
+      { code: 'ay', name: 'Aymara' },
+      { code: 'gn', name: 'Guarani' }
+    ];
+
+    // Populate language selectors
+    const sourceLang = document.getElementById('sourceLang');
+    const targetLang = document.getElementById('targetLang');
+    languages.forEach(lang => {
+      const opt1 = document.createElement('option');
+      opt1.value = lang.code;
+      opt1.textContent = lang.name;
+      sourceLang.appendChild(opt1);
+      const opt2 = document.createElement('option');
+      opt2.value = lang.code;
+      opt2.textContent = lang.name;
+      targetLang.appendChild(opt2);
+    });
+    sourceLang.value = 'en';
+    targetLang.value = 'es';
+
+    // Gemini 2.0 Flash API call
+    const API_KEY = 'AIzaSyBa99_1R8YsvBS4e2s8_8NWG1FgV5GWLTg';
+    async function translateText(text, from, to) {
+      // Gemini API expects a prompt, so we craft a translation prompt
+      const prompt = `Translate the following text from ${getLangName(from)} to ${getLangName(to)}. Only return the translation, no explanation.\nText: ${text}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+      const body = {
+        contents: [{ parts: [{ text: prompt }] }]
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Translation failed');
+      const data = await res.json();
+      // Extract translation from response
+      const translation = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      return translation || 'No translation found.';
+    }
+
+    function getLangName(code) {
+      const lang = languages.find(l => l.code === code);
+      return lang ? lang.name : code;
+    }
+
+    // Text-to-Speech using browser SpeechSynthesis with fallback
+    function speak(text, langCode) {
+      if (!window.speechSynthesis) {
+        alert('Speech synthesis not supported in this browser.');
+        return;
+      }
+      
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = langCode;
+      
+      // Get available voices
+      let voices = window.speechSynthesis.getVoices();
+      
+      // If voices aren't loaded yet, wait for them
+      if (voices.length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          voices = window.speechSynthesis.getVoices();
+          trySpeak(text, langCode, voices);
+        };
+        return;
+      }
+      
+      trySpeak(text, langCode, voices);
+    }
+    
+    function trySpeak(text, langCode, voices) {
+      const utter = new SpeechSynthesisUtterance(text);
+      
+      // Try to find exact language match
+      let voice = voices.find(v => v.lang.startsWith(langCode));
+      
+      // If no exact match, try similar languages
+      if (!voice) {
+        const similarLangs = getSimilarLanguages(langCode);
+        for (const similarLang of similarLangs) {
+          voice = voices.find(v => v.lang.startsWith(similarLang));
+          if (voice) break;
+        }
+      }
+      
+      // If still no match, use default voice
+      if (!voice) {
+        voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+        if (voice) {
+          alert(`No voice available for ${getLangName(langCode)}. Using ${voice.name} instead.`);
+        }
+      }
+      
+      if (voice) {
+        utter.voice = voice;
+        utter.lang = voice.lang;
+      }
+      
+      window.speechSynthesis.speak(utter);
+    }
+    
+    // Map languages to similar ones for voice fallback
+    function getSimilarLanguages(langCode) {
+      const similarMap = {
+        'sd': ['ur', 'hi', 'en'], // Sindhi -> Urdu, Hindi, English
+        'ps': ['ur', 'fa', 'en'], // Pashto -> Urdu, Persian, English
+        'ku': ['tr', 'ar', 'en'], // Kurdish -> Turkish, Arabic, English
+        'ne': ['hi', 'en'], // Nepali -> Hindi, English
+        'my': ['th', 'en'], // Burmese -> Thai, English
+        'km': ['th', 'en'], // Khmer -> Thai, English
+        'lo': ['th', 'en'], // Lao -> Thai, English
+        'am': ['ar', 'en'], // Amharic -> Arabic, English
+        'so': ['ar', 'en'], // Somali -> Arabic, English
+        'yo': ['en'], // Yoruba -> English
+        'ig': ['en'], // Igbo -> English
+        'ha': ['ar', 'en'], // Hausa -> Arabic, English
+        'rw': ['sw', 'en'], // Kinyarwanda -> Swahili, English
+        'mg': ['fr', 'en'], // Malagasy -> French, English
+        'st': ['zu', 'en'], // Sesotho -> Zulu, English
+        'tn': ['zu', 'en'], // Tswana -> Zulu, English
+        'xh': ['zu', 'en'], // Xhosa -> Zulu, English
+        'ss': ['zu', 'en'], // Swati -> Zulu, English
+        've': ['zu', 'en'], // Venda -> Zulu, English
+        'ts': ['zu', 'en'], // Tsonga -> Zulu, English
+        'nr': ['zu', 'en'], // Ndebele -> Zulu, English
+        'ny': ['sw', 'en'], // Chichewa -> Swahili, English
+        'sn': ['zu', 'en'], // Shona -> Zulu, English
+        'to': ['en'], // Tongan -> English
+        'sm': ['en'], // Samoan -> English
+        'fj': ['en'], // Fijian -> English
+        'ty': ['fr', 'en'], // Tahitian -> French, English
+        'mi': ['en'], // Maori -> English
+        'qu': ['es', 'en'], // Quechua -> Spanish, English
+        'ay': ['es', 'en'], // Aymara -> Spanish, English
+        'gn': ['es', 'en'], // Guarani -> Spanish, English
+        'jv': ['id', 'en'], // Javanese -> Indonesian, English
+        'tl': ['en'], // Tagalog -> English
+        'sw': ['en'], // Swahili -> English
+        'ta': ['en'], // Tamil -> English
+        'te': ['en'], // Telugu -> English
+        'mr': ['hi', 'en'], // Marathi -> Hindi, English
+        'gu': ['hi', 'en'], // Gujarati -> Hindi, English
+        'pa': ['hi', 'en'], // Punjabi -> Hindi, English
+        'ml': ['en'], // Malayalam -> English
+        'kn': ['en'], // Kannada -> English
+        'si': ['en'], // Sinhala -> English
+        'hy': ['ru', 'en'], // Armenian -> Russian, English
+        'ka': ['ru', 'en'], // Georgian -> Russian, English
+        'az': ['tr', 'en'], // Azerbaijani -> Turkish, English
+        'uz': ['tr', 'en'], // Uzbek -> Turkish, English
+        'kk': ['ru', 'en'], // Kazakh -> Russian, English
+        'ky': ['ru', 'en'], // Kyrgyz -> Russian, English
+        'tg': ['fa', 'en'], // Tajik -> Persian, English
+        'tk': ['tr', 'en'], // Turkmen -> Turkish, English
+        'mn': ['ru', 'en'], // Mongolian -> Russian, English
+        'or': ['hi', 'en'], // Odia -> Hindi, English
+        'as': ['hi', 'en'], // Assamese -> Hindi, English
+        'sa': ['hi', 'en'], // Sanskrit -> Hindi, English
+        'bn': ['hi', 'en'], // Bengali -> Hindi, English
+        'ur': ['hi', 'en'], // Urdu -> Hindi, English
+        'fa': ['ar', 'en'], // Persian -> Arabic, English
+        'ar': ['en'], // Arabic -> English
+        'he': ['en'], // Hebrew -> English
+        'th': ['en'], // Thai -> English
+        'vi': ['en'], // Vietnamese -> English
+        'ko': ['en'], // Korean -> English
+        'ja': ['en'], // Japanese -> English
+        'zh': ['en'], // Chinese -> English
+        'ru': ['en'], // Russian -> English
+        'uk': ['ru', 'en'], // Ukrainian -> Russian, English
+        'pl': ['en'], // Polish -> English
+        'cs': ['en'], // Czech -> English
+        'sk': ['cs', 'en'], // Slovak -> Czech, English
+        'sl': ['en'], // Slovenian -> English
+        'hr': ['en'], // Croatian -> English
+        'bs': ['hr', 'en'], // Bosnian -> Croatian, English
+        'sr': ['hr', 'en'], // Serbian -> Croatian, English
+        'mk': ['bg', 'en'], // Macedonian -> Bulgarian, English
+        'bg': ['en'], // Bulgarian -> English
+        'ro': ['en'], // Romanian -> English
+        'hu': ['en'], // Hungarian -> English
+        'fi': ['en'], // Finnish -> English
+        'et': ['fi', 'en'], // Estonian -> Finnish, English
+        'lv': ['en'], // Latvian -> English
+        'lt': ['en'], // Lithuanian -> English
+        'sq': ['en'], // Albanian -> English
+        'el': ['en'], // Greek -> English
+        'mt': ['it', 'en'], // Maltese -> Italian, English
+        'ga': ['en'], // Irish -> English
+        'cy': ['en'], // Welsh -> English
+        'is': ['en'], // Icelandic -> English
+        'no': ['en'], // Norwegian -> English
+        'sv': ['no', 'en'], // Swedish -> Norwegian, English
+        'da': ['no', 'en'], // Danish -> Norwegian, English
+        'nl': ['en'], // Dutch -> English
+        'de': ['en'], // German -> English
+        'lb': ['de', 'en'], // Luxembourgish -> German, English
+        'fr': ['en'], // French -> English
+        'ca': ['es', 'en'], // Catalan -> Spanish, English
+        'eu': ['es', 'en'], // Basque -> Spanish, English
+        'gl': ['es', 'en'], // Galician -> Spanish, English
+        'pt': ['es', 'en'], // Portuguese -> Spanish, English
+        'it': ['es', 'en'], // Italian -> Spanish, English
+        'es': ['en'], // Spanish -> English
+        'tr': ['en'], // Turkish -> English
+        'id': ['en'], // Indonesian -> English
+        'ms': ['id', 'en'], // Malay -> Indonesian, English
+        'fil': ['en'], // Filipino -> English
+        'af': ['en'], // Afrikaans -> English
+        'zu': ['en'] // Zulu -> English
+      };
+      
+      return similarMap[langCode] || ['en'];
+    }
+
+    // Form handling
+    const form = document.getElementById('translateForm');
+    const inputText = document.getElementById('inputText');
+    const outputText = document.getElementById('outputText');
+    const playAudio = document.getElementById('playAudio');
+    const recordAudio = document.getElementById('recordAudio');
+    const manualReply = document.getElementById('manualReply');
+    const translateReply = document.getElementById('translateReply');
+    let lastTranslation = '';
+    let lastTargetLang = '';
+    let recording = false;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = inputText.value.trim();
+      const from = sourceLang.value;
+      const to = targetLang.value;
+      if (!text) {
+        outputText.textContent = 'Please enter text to translate.';
+        playAudio.disabled = true;
+        return;
+      }
+      outputText.textContent = 'Translating...';
+      playAudio.disabled = true;
+      try {
+        const translation = await translateText(text, from, to);
+        outputText.textContent = translation;
+        lastTranslation = translation;
+        lastTargetLang = to;
+        playAudio.disabled = false;
+      } catch (err) {
+        outputText.textContent = 'Error: ' + err.message;
+        playAudio.disabled = true;
+      }
+    });
+
+    playAudio.addEventListener('click', () => {
+      if (lastTranslation && lastTargetLang) {
+        speak(lastTranslation, lastTargetLang);
+      }
+    });
+
+    translateReply.addEventListener('click', async () => {
+      const replyText = manualReply.value.trim();
+      if (!replyText) {
+        document.getElementById('replyOutput').textContent = 'Please enter a reply to translate.';
+        return;
+      }
+      
+      document.getElementById('replyOutput').textContent = 'Translating reply...';
+      
+      try {
+        const originalLang = sourceLang.value;
+        const replyLang = targetLang.value;
+        const translation = await translateText(replyText, replyLang, originalLang);
+        
+        document.getElementById('replyOutput').textContent = `Original: "${replyText}"\n\nTranslation: "${translation}"`;
+      } catch (err) {
+        document.getElementById('replyOutput').textContent = 'Error translating reply: ' + err.message;
+      }
+    });
+
+    recordAudio.addEventListener('click', () => {
+      if (recording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+
+    function startRecording() {
+      if (!window.webkitSpeechRecognition && !window.SpeechRecognition) {
+        alert('Speech recognition not supported in this browser. Please use Chrome or Edge.');
+        return;
+      }
+
+      recording = true;
+      recordAudio.textContent = '🎤 Recording...';
+      recordAudio.classList.add('recording');
+      
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      // Use a more reliable language code format
+      let langCode = 'en-US'; // Default fallback
+      
+      // Map language codes to proper speech recognition codes
+      const langMap = {
+        'en': 'en-US',
+        'es': 'es-ES',
+        'fr': 'fr-FR',
+        'de': 'de-DE',
+        'it': 'it-IT',
+        'pt': 'pt-BR',
+        'ru': 'ru-RU',
+        'ja': 'ja-JP',
+        'ko': 'ko-KR',
+        'zh': 'zh-CN',
+        'ar': 'ar-SA',
+        'hi': 'hi-IN',
+        'tr': 'tr-TR',
+        'th': 'th-TH',
+        'pl': 'pl-PL',
+        'nl': 'nl-NL',
+        'sv': 'sv-SE',
+        'el': 'el-GR',
+        'he': 'he-IL',
+        'id': 'id-ID',
+        'vi': 'vi-VN',
+        'fa': 'fa-IR',
+        'ur': 'ur-PK',
+        'bn': 'bn-IN',
+        'uk': 'uk-UA',
+        'ro': 'ro-RO',
+        'hu': 'hu-HU',
+        'cs': 'cs-CZ',
+        'fi': 'fi-FI',
+        'no': 'no-NO',
+        'da': 'da-DK',
+        'ms': 'ms-MY',
+        'tl': 'tl-PH',
+        'sw': 'sw-KE',
+        'ta': 'ta-IN',
+        'te': 'te-IN',
+        'mr': 'mr-IN',
+        'gu': 'gu-IN',
+        'pa': 'pa-IN'
+      };
+      
+      langCode = langMap[targetLang.value] || 'en-US';
+      
+      recognition.lang = langCode;
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        processRecording(transcript);
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        
+        if (event.error === 'network') {
+          // Network error - try with English as fallback
+          tryEnglishFallback();
+        } else if (event.error === 'no-speech') {
+          // No speech detected - try with English as fallback
+          tryEnglishFallback();
+        } else if (event.error === 'not-allowed') {
+          stopRecording();
+          document.getElementById('replyOutput').textContent = 'Microphone access denied. Please allow microphone access and try again.';
+        } else {
+          stopRecording();
+          document.getElementById('replyOutput').textContent = 'Speech recognition error: ' + event.error + '. Please try again.';
+        }
+      };
+      
+      recognition.onend = () => {
+        if (recording) {
+          stopRecording();
+        }
+      };
+      
+      // Start recognition with error handling
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error('Error starting recognition:', error);
+        tryEnglishFallback();
+      }
+      
+      function tryEnglishFallback() {
+        if (langCode === 'en-US') {
+          // Already tried English, give up
+          stopRecording();
+          document.getElementById('replyOutput').textContent = 'Could not recognize speech. Please check your microphone and try again.';
+          return;
+        }
+        
+        console.log('Trying English fallback...');
+        const fallbackRecognition = new SpeechRecognition();
+        fallbackRecognition.lang = 'en-US';
+        fallbackRecognition.continuous = false;
+        fallbackRecognition.interimResults = false;
+        fallbackRecognition.maxAlternatives = 1;
+        
+        fallbackRecognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          processRecording(transcript);
+        };
+        
+        fallbackRecognition.onerror = (event) => {
+          console.error('Fallback recognition error:', event.error);
+          stopRecording();
+          document.getElementById('replyOutput').textContent = 'Could not recognize speech. Please try again or check your microphone.';
+        };
+        
+        fallbackRecognition.onend = () => {
+          if (recording) {
+            stopRecording();
+          }
+        };
+        
+        try {
+          fallbackRecognition.start();
+        } catch (error) {
+          console.error('Error starting fallback recognition:', error);
+          stopRecording();
+          document.getElementById('replyOutput').textContent = 'Speech recognition failed. Please try again.';
+        }
+      }
+    }
+
+    function stopRecording() {
+      recording = false;
+      recordAudio.textContent = '🎤 Record';
+      recordAudio.classList.remove('recording');
+    }
+
+    async function processRecording(transcript) {
+      const replyOutput = document.getElementById('replyOutput');
+      replyOutput.textContent = 'Processing reply...';
+      
+      try {
+        // Translate the reply back to original language
+        const originalLang = sourceLang.value;
+        const replyLang = targetLang.value;
+        const translation = await translateText(transcript, replyLang, originalLang);
+        
+        replyOutput.textContent = `Original: "${transcript}"\n\nTranslation: "${translation}"`;
+      } catch (err) {
+        replyOutput.textContent = 'Error processing reply: ' + err.message;
+      }
+    }
+
+
+  </script>
+</body>
+</html>
+(this is my code look where did I make the mistake)
